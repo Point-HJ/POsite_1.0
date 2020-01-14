@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>PO-site</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link href="~/Content/MyStyle.css" rel="stylesheet" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function () {
+
+
+            //luodaan muuttujat ja niille kohteet
+            var $PoNumber = $('#ponumber');
+            var $EAN = $('.ean');
+            var $Amount = $('.amount');
+            var po;
+
+            if (localStorage.getItem('accessToken') == null) {
+                location.href = "/Sites/login.cshtml"
+            }
+            console.log(localStorage.getItem('userName'));
+
+            function getDate() {
+                var d = new Date();
+                var month = d.getMonth() + 1;
+                var day = d.getDate();
+                var year = d.getFullYear();
+                return date = year + '/' +
+                    (('' + month).length < 2 ? '0' : '') + month + '/' +
+                    (('' + day).length < 2 ? '0' : '') + day;
+
+            }
+            //Taulukko luoduista PO:numeroista
+            $.ajax({
+                type: 'GET',
+                url: '/api/q_import_bp',
+                dataType: 'json',
+
+                success: function (data) {
+                    $.each(data, function (i, val) {
+                        if (val.q_PartyID_Identifier == JSON.parse(localStorage.getItem('userName'))) {
+                            //luodaan taulukko, johon arvot tuodaan halutuista sarakkeista
+                            po +=
+                                '<tr >' +
+                                "<td>" + val.RowCreatedDt + "</td>" +
+                                "<td>" + val.Bestnr + "</td>" +
+                                "<td>" + val.Artnr + "</td>" +
+                                "<td>" + val.BestAnt + "</td>" +
+
+                                '</tr>';
+                        }
+
+                    });
+                    //näytetään taulukko sivulla
+                    $('#po_table').append(po);
+                }
+            });
+
+            //Kirjaudu ulos
+            $('#exit').click(function () {
+                var ok = confirm('Haluatko varmasti kirjautua ulos? Vill du logga ut?');
+                if (ok == true) {
+                    localStorage.removeItem('accessToken');
+                    location.href = "/Sites/login.cshtml";
+                }
+            });
+
+            // Tähän savepo
+            $('#savepo').click(function (e) {
+                e.preventDefault();
+
+                var bhform = {
+                    foretagkod: 3000,
+                    q_MessageNumber: '100',
+                    Bestnr: $PoNumber.val(),
+                    RowCreatedDt: getDate(),
+                }
+                var bpform = {
+                    foretagkod: 3000,
+                    q_MessageNumber: '100',
+                    Bestnr: $PoNumber.val(),
+                    Artnr: $EAN.val(),
+                    BestAnt: $Amount.val(),
+                    q_PartyID_Identifier: localStorage.getItem('userName'),
+                    RowCreatedDt: getDate(),
+                }
+
+                $.ajax({
+                    method: 'post',
+                    url: '/api/q_import_bh',
+                    data: bhform,
+                    success: function () {
+
+                    },
+                    error: function () {
+                        alert('Virhe. Tietoja ei tallennettu tauluun BH!');
+                    }
+                });
+                $.ajax({
+                    method: 'post',
+                    url: '/api/q_import_bp',
+                    data: bpform,
+                    success: function () {
+                        location.href = "index.cshtml";
+                    },
+                    error: function () {
+                        alert('Virhe. Tietoja ei tallennettu tauluun BP!');
+                    }
+                });
+            });
+        });
+
+    </script>
+
+</head>
+<body>
+    <div class="jumbotron">
+        <h1>PO-site</h1>
+        <p style="text-align:center">Tallenna PO-numerot tuotteillesi alla olevalla lomakkeella.</p>
+    </div>
+
+    <form id="poform" class="form-horizontal">
+        <div class="form-group">
+            <label for="filler"
+                   class="col-xs-3 control-label">PO:numero</label>
+            <div class="col-xs-7">
+                <input type="text" class="form-control" id="ponumber" required />
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-xs-3 control-label">Tuote ja määrä</label>
+            <div class="col-xs-7">
+                <input type="text"
+                       class="ean"
+                       placeholder="Ean">
+                <input type="number"
+                       class="amount"
+                       placeholder="Määrä">
+            </div>
+        </div>
+
+        <div class="row">
+            <label for="contact" class="col-xs-3 control-label"></label>
+            <div class="col-xs-7">
+                <button type="submit" id="savepo" class="btn button1">Tallenna</button>
+                <button type="submit" id="exit" class="btn button1">Kirjaudu ulos</button>
+            </div>
+        </div>
+    </form>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+
+    <div class="container">
+        <form class="form-horizontal">
+            <div class="form-group">
+                <div class="container">
+                    <h3>Perustetut PO:t</h3>
+                    <table class="table table-bordered" id="po_table">
+                        <thead>
+                            <tr>
+
+                                <th>pvm / datum</th>
+                                <th>PO-numero </th>
+                                <th>ISBN </th>
+                                <th>Määrä</th>
+
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <br>
+                <br>
+                <br>
+
+            </div>
+        </form>
+
+    </div>
+
+
+
+
+
+
+
+</body>
+</html>
